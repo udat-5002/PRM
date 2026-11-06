@@ -76,24 +76,38 @@ class StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final background = posted
-        ? const Color(0xFFE4F4EF)
-        : const Color(0xFFFFF3D9);
+        ? const Color(0xFFE6F4EA)
+        : const Color(0xFFFEF3C7);
     final foreground = posted
-        ? const Color(0xFF18745D)
-        : const Color(0xFF94620A);
+        ? const Color(0xFF137333)
+        : const Color(0xFF92400E);
+    final icon = posted
+        ? Icons.check_circle_outline_rounded
+        : Icons.edit_note_rounded;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
         color: background,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        posted ? 'Đã Post' : 'Nháp',
-        style: TextStyle(
-          color: foreground,
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: posted ? const Color(0xFFA8DAB5) : const Color(0xFFFDE68A),
         ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: foreground),
+          const SizedBox(width: 4),
+          Text(
+            posted ? 'Đã Post' : 'Nháp',
+            style: TextStyle(
+              color: foreground,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }

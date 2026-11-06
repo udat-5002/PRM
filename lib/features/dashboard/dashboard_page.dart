@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../data/remote/vax_api_service.dart';
 import '../../domain/models/warehouse_app_data.dart';
 import '../../domain/services/warehouse_app_state.dart';
 import '../../shared/formatters.dart';
@@ -109,9 +110,87 @@ class DashboardPage extends StatelessWidget {
             children: [
               SectionHeading(
                 title: 'Xin chào, ${user.fullName.split(' ').first}',
-                subtitle: 'Tổng quan hoạt động kho của bạn.',
+                subtitle: 'Tổng quan chuỗi cung ứng vaccine & kho bảo quản lạnh.',
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 18),
+              FutureBuilder<Map<String, dynamic>>(
+                future: VaxApiService().getDashboardSummary(user.warehouseId),
+                builder: (context, snapshot) {
+                  final data = snapshot.data;
+                  if (data == null) return const SizedBox.shrink();
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 20),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0FDF4),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFBBF7D0)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.shield_outlined, color: Color(0xFF15803D)),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Chỉ số VaxStock Cold-Chain & FEFO (Backend Trực Tuyến)',
+                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    color: const Color(0xFF15803D),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 14,
+                          runSpacing: 10,
+                          children: [
+                            _vaxKpiBadge(
+                              'Tổng vaccine',
+                              '${data['totalVaccines']} loại',
+                              const Color(0xFF0F766E),
+                              const Color(0xFFCCFBF1),
+                            ),
+                            _vaxKpiBadge(
+                              'Lọ tồn vật lý',
+                              '${data['totalPhysicalVials']} lọ',
+                              const Color(0xFF1D4ED8),
+                              const Color(0xFFDBEAFE),
+                            ),
+                            _vaxKpiBadge(
+                              'Khả dụng xuất FEFO',
+                              '${data['totalAvailableVials']} lọ',
+                              const Color(0xFF15803D),
+                              const Color(0xFFDCFCE7),
+                            ),
+                            _vaxKpiBadge(
+                              'Chờ QA duyệt',
+                              '${data['pendingInspectionVials']} lọ',
+                              const Color(0xFFB45309),
+                              const Color(0xFFFEF3C7),
+                            ),
+                            _vaxKpiBadge(
+                              'Đang cách ly',
+                              '${data['quarantinedVials']} lọ',
+                              const Color(0xFFB91C1C),
+                              const Color(0xFFFEE2E2),
+                            ),
+                            _vaxKpiBadge(
+                              'Lô cận date (<60d)',
+                              '${data['nearExpiryBatchesCount']} lô',
+                              const Color(0xFFC2410C),
+                              const Color(0xFFFFEDD5),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(22),
@@ -210,6 +289,43 @@ class DashboardPage extends StatelessWidget {
       },
     );
   }
+
+  Widget _vaxKpiBadge(
+    String label,
+    String value,
+    Color textCol,
+    Color bgCol,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: bgCol,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: textCol.withValues(alpha: 0.8),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: textCol,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _MetricData {
@@ -233,20 +349,20 @@ class _MetricCard extends StatelessWidget {
       color: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: Color(0xFFE7ECF2)),
+        side: const BorderSide(color: Color(0xFFE2E8F0)),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(17),
+        padding: const EdgeInsets.all(16),
         child: Row(
           children: [
             Container(
-              width: 43,
-              height: 43,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
-                color: metric.color.withValues(alpha: .11),
-                borderRadius: BorderRadius.circular(13),
+                color: metric.color.withValues(alpha: .12),
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(metric.icon, color: metric.color),
+              child: Icon(metric.icon, color: metric.color, size: 22),
             ),
             const SizedBox(width: 13),
             Expanded(
@@ -257,12 +373,18 @@ class _MetricCard extends StatelessWidget {
                     metric.label,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF64748B),
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 4),
                   Text(
                     metric.value,
-                    style: Theme.of(context).textTheme.titleLarge,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                    ),
                   ),
                 ],
               ),

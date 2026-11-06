@@ -1,4 +1,4 @@
-enum UserRole { admin, user }
+enum UserRole { admin, user, warehouseStaff, qualityManager }
 
 enum DocumentStatus { draft, posted }
 
@@ -9,6 +9,9 @@ class AppUser {
     required this.password,
     required this.fullName,
     required this.role,
+    this.warehouseId,
+    this.warehouseName,
+    this.token,
   });
 
   final int id;
@@ -16,6 +19,9 @@ class AppUser {
   final String password;
   final String fullName;
   final UserRole role;
+  final int? warehouseId;
+  final String? warehouseName;
+  final String? token;
 
   Map<String, Object?> toJson() => {
     'id': id,
@@ -23,18 +29,35 @@ class AppUser {
     'password': password,
     'fullName': fullName,
     'role': role.name,
+    'warehouseId': warehouseId,
+    'warehouseName': warehouseName,
+    'token': token,
   };
 
-  factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(
-    id: _asInt(json['id']),
-    username: _asString(json['username']),
-    password: _asString(json['password']),
-    fullName: _asString(json['fullName']),
-    role: UserRole.values.firstWhere(
-      (role) => role.name == json['role'],
-      orElse: () => UserRole.user,
-    ),
-  );
+  factory AppUser.fromJson(Map<String, dynamic> json) {
+    final roleStr = (json['role'] ?? '').toString().toLowerCase();
+    UserRole role;
+    if (roleStr == 'admin') {
+      role = UserRole.admin;
+    } else if (roleStr == 'warehousestaff' || roleStr == 'staff') {
+      role = UserRole.warehouseStaff;
+    } else if (roleStr == 'qualitymanager' || roleStr == 'qa') {
+      role = UserRole.qualityManager;
+    } else {
+      role = UserRole.user;
+    }
+
+    return AppUser(
+      id: _asInt(json['id']),
+      username: _asString(json['username']),
+      password: _asString(json['password']),
+      fullName: _asString(json['fullName']),
+      role: role,
+      warehouseId: json['warehouseId'] != null ? _asInt(json['warehouseId']) : null,
+      warehouseName: json['warehouseName'] as String?,
+      token: json['token'] as String?,
+    );
+  }
 }
 
 class Warehouse {

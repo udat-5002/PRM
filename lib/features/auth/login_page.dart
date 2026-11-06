@@ -193,26 +193,48 @@ class _LoginPageState extends State<LoginPage> {
             const Divider(),
             const SizedBox(height: 10),
             Text(
-              'Tài khoản demo',
+              'Tài khoản demo VaxStock',
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 10),
-            const _DemoAccount(
-              label: 'Quản trị',
+            _DemoAccount(
+              label: 'Quản trị viên',
               login: 'admin',
               password: 'admin123',
+              onTap: () {
+                _username.text = 'admin';
+                _password.text = 'admin123';
+              },
             ),
             const SizedBox(height: 7),
-            const _DemoAccount(
-              label: 'Nhân viên HCM',
+            _DemoAccount(
+              label: 'Thủ kho Hà Nội',
+              login: 'staff_kho1',
+              password: 'staff123',
+              onTap: () {
+                _username.text = 'staff_kho1';
+                _password.text = 'staff123';
+              },
+            ),
+            const SizedBox(height: 7),
+            _DemoAccount(
+              label: 'Kiểm định chất lượng QA',
+              login: 'qa_manager',
+              password: 'qa123',
+              onTap: () {
+                _username.text = 'qa_manager';
+                _password.text = 'qa123';
+              },
+            ),
+            const SizedBox(height: 7),
+            _DemoAccount(
+              label: 'Nhân viên (Local)',
               login: 'user_hcm',
               password: '123456',
-            ),
-            const SizedBox(height: 7),
-            const _DemoAccount(
-              label: 'Nhân viên Hà Nội',
-              login: 'user_hn',
-              password: '123456',
+              onTap: () {
+                _username.text = 'user_hcm';
+                _password.text = '123456';
+              },
             ),
           ],
         ),
@@ -226,23 +248,63 @@ class _DemoAccount extends StatelessWidget {
     required this.label,
     required this.login,
     required this.password,
+    this.onTap,
   });
 
   final String label;
   final String login;
   final String password;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(label, style: Theme.of(context).textTheme.bodySmall),
+    // ponytail: Tap target >= 44dp + bo cuc ro rang theo touch-targets & taste-skill
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 44),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
         ),
-        Text(login, style: Theme.of(context).textTheme.labelLarge),
-        const SizedBox(width: 10),
-        Text(password, style: Theme.of(context).textTheme.bodySmall),
-      ],
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF334155),
+                ),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: const Color(0xFFCBD5E1)),
+              ),
+              child: Text(
+                login,
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              password,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

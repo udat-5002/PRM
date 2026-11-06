@@ -251,27 +251,39 @@ class _DocumentListPageState extends State<DocumentListPage> {
   Widget _actions(Object document) {
     final id = _id(document);
     final posted = _statusOf(document) == DocumentStatus.posted;
-    return Wrap(
-      spacing: 0,
+    // ponytail: Phan tach spacing tranh bam nham nut Delete khi thao tac tren man hinh cam ung
+    return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         IconButton(
           tooltip: posted ? 'Xem phiếu' : 'Sửa phiếu',
           onPressed: () => _openEditor(document),
           icon: Icon(
             posted ? Icons.visibility_outlined : Icons.edit_outlined,
-            size: 19,
+            size: 20,
+            color: const Color(0xFF475569),
           ),
         ),
         if (!posted) ...[
+          const SizedBox(width: 4),
           IconButton(
             tooltip: 'Post phiếu',
             onPressed: () => _post(id),
-            icon: const Icon(Icons.check_circle_outline, size: 19),
+            icon: const Icon(
+              Icons.check_circle_outline_rounded,
+              size: 20,
+              color: Color(0xFF0B7A72),
+            ),
           ),
+          const SizedBox(width: 4),
           IconButton(
             tooltip: 'Xóa phiếu nháp',
             onPressed: () => _delete(id),
-            icon: const Icon(Icons.delete_outline, size: 19),
+            icon: const Icon(
+              Icons.delete_outline_rounded,
+              size: 20,
+              color: Color(0xFFDC2626),
+            ),
           ),
         ],
       ],

@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../domain/models/warehouse_app_data.dart';
 import '../domain/services/warehouse_app_state.dart';
+import 'batches/batch_list_page.dart';
 import 'dashboard/dashboard_page.dart';
 import 'documents/document_list_page.dart';
 import 'inventory/inventory_page.dart';
 import 'master_data/master_data_page.dart';
+import 'quality/quality_page.dart';
 import 'reports/report_page.dart';
+import 'trade_shipments/trade_shipments_page.dart';
 import 'warehouse_permissions/warehouse_permissions_page.dart';
 
 enum _Destination {
@@ -15,10 +18,13 @@ enum _Destination {
   units,
   categories,
   products,
+  batches,
   suppliers,
   receipts,
   issues,
   inventory,
+  quality,
+  shipments,
   reports,
   assignments,
 }
@@ -78,6 +84,12 @@ class _WarehouseShellState extends State<WarehouseShell> {
         Icons.inventory_2_outlined,
       ),
       const _NavigationEntry(
+        _Destination.batches,
+        'DANH MỤC',
+        'Quản lý Lô',
+        Icons.qr_code_2_rounded,
+      ),
+      const _NavigationEntry(
         _Destination.suppliers,
         'DANH MỤC',
         'Nhà cung cấp',
@@ -100,6 +112,18 @@ class _WarehouseShellState extends State<WarehouseShell> {
         'NGHIỆP VỤ',
         'Tồn kho',
         Icons.stacked_bar_chart_rounded,
+      ),
+      const _NavigationEntry(
+        _Destination.quality,
+        'NGHIỆP VỤ',
+        'Kiểm định QA',
+        Icons.verified_user_outlined,
+      ),
+      const _NavigationEntry(
+        _Destination.shipments,
+        'NGHIỆP VỤ',
+        'Hồ sơ XNK',
+        Icons.flight_takeoff_rounded,
       ),
       const _NavigationEntry(
         _Destination.reports,
@@ -276,9 +300,13 @@ class _WarehouseShellState extends State<WarehouseShell> {
                         style: Theme.of(context).textTheme.labelLarge,
                       ),
                       Text(
-                        widget.user.role == UserRole.admin
-                            ? 'Quản trị viên'
-                            : 'Người dùng',
+                        switch (widget.user.role) {
+                          UserRole.admin => 'Quản trị viên',
+                          UserRole.warehouseStaff =>
+                            'Thủ kho${widget.user.warehouseName != null ? ' (${widget.user.warehouseName})' : ''}',
+                          UserRole.qualityManager => 'Kiểm định QA',
+                          UserRole.user => 'Người dùng',
+                        },
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
@@ -386,6 +414,7 @@ class _WarehouseShellState extends State<WarehouseShell> {
         user: user,
         kind: MasterDataKind.product,
       ),
+      _Destination.batches => BatchListPage(state: widget.state, user: user),
       _Destination.suppliers => MasterDataPage(
         state: widget.state,
         user: user,
@@ -402,6 +431,11 @@ class _WarehouseShellState extends State<WarehouseShell> {
         isReceipt: false,
       ),
       _Destination.inventory => InventoryPage(state: widget.state, user: user),
+      _Destination.quality => QualityPage(state: widget.state, user: user),
+      _Destination.shipments => TradeShipmentsPage(
+        state: widget.state,
+        user: user,
+      ),
       _Destination.reports => ReportPage(state: widget.state, user: user),
       _Destination.assignments => WarehousePermissionsPage(
         state: widget.state,

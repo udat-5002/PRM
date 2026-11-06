@@ -28,6 +28,22 @@ WarehouseAppData createDemoData() {
         fullName: 'Nhân viên Hà Nội',
         role: UserRole.user,
       ),
+      AppUser(
+        id: 4,
+        username: 'staff_kho1',
+        password: 'staff123',
+        fullName: 'Nguyễn Văn Kho (Hà Nội)',
+        role: UserRole.warehouseStaff,
+        warehouseId: 2,
+        warehouseName: 'Kho Hà Nội',
+      ),
+      AppUser(
+        id: 5,
+        username: 'qa_manager',
+        password: 'qa123',
+        fullName: 'Lê Thị Kiểm Định (QA/QC)',
+        role: UserRole.qualityManager,
+      ),
     ],
     warehouses: const [
       Warehouse(id: 1, name: 'Kho Hồ Chí Minh', note: 'Kho phía Nam'),
@@ -89,6 +105,7 @@ WarehouseAppData createDemoData() {
     assignments: const [
       WarehouseUserAssignment(id: 1, userId: 2, warehouseId: 1),
       WarehouseUserAssignment(id: 2, userId: 3, warehouseId: 2),
+      WarehouseUserAssignment(id: 3, userId: 4, warehouseId: 2),
     ],
     receipts: [
       ReceiptDocument(

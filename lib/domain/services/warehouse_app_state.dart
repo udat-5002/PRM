@@ -37,9 +37,17 @@ class WarehouseAppState extends ChangeNotifier {
       if (decoded is! Map<String, dynamic>) {
         throw const FormatException('Warehouse data must be a JSON object.');
       }
+      final loadedData = WarehouseAppData.fromJson(decoded);
+      // ponytail: Đảm bảo tài khoản demo (staff, qa) luôn khả dụng nếu store SharedPreferences cũ
+      final existingNames = loadedData.users.map((u) => u.username.toLowerCase()).toSet();
+      for (final demoUser in createDemoData().users) {
+        if (!existingNames.contains(demoUser.username.toLowerCase())) {
+          loadedData.users.add(demoUser);
+        }
+      }
       return WarehouseAppState._(
         store: store,
-        data: WarehouseAppData.fromJson(decoded),
+        data: loadedData,
       );
     } on FormatException catch (error) {
       throw DomainException(
@@ -49,7 +57,7 @@ class WarehouseAppState extends ChangeNotifier {
   }
 
   Future<bool> login(String username, String password) async {
-    final user = _auth.authenticate(data.users, username, password);
+    final user = await _auth.authenticate(data.users, username, password);
     if (user == null) return false;
     currentUser = user;
     notifyListeners();
@@ -881,6 +889,15 @@ class WarehouseAppState extends ChangeNotifier {
           user.role == actor.role) {
         return user;
       }
+    }
+    // ponytail: Chấp nhận session backend JWT hoặc khớp username trong danh sách users
+    for (final user in data.users) {
+      if (user.username.toLowerCase() == actor.username.toLowerCase()) {
+        return actor;
+      }
+    }
+    if (actor.token != null && actor.token!.isNotEmpty) {
+      return actor;
     }
     throw const DomainException(
       'Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.',

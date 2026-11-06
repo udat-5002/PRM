@@ -9,10 +9,15 @@ class WarehousePermissionService {
     int warehouseId,
     List<WarehouseUserAssignment> assignments,
   ) {
-    return user.role == UserRole.admin ||
-        assignments.any(
-          (item) => item.userId == user.id && item.warehouseId == warehouseId,
-        );
+    if (user.role == UserRole.admin || user.role == UserRole.qualityManager) {
+      return true;
+    }
+    if (user.warehouseId != null && user.warehouseId == warehouseId) {
+      return true;
+    }
+    return assignments.any(
+      (item) => item.userId == user.id && item.warehouseId == warehouseId,
+    );
   }
 
   List<Warehouse> allowedWarehouses(
@@ -20,11 +25,16 @@ class WarehousePermissionService {
     List<Warehouse> warehouses,
     List<WarehouseUserAssignment> assignments,
   ) {
-    if (user.role == UserRole.admin) return List.unmodifiable(warehouses);
+    if (user.role == UserRole.admin || user.role == UserRole.qualityManager) {
+      return List.unmodifiable(warehouses);
+    }
     final allowedIds = assignments
         .where((item) => item.userId == user.id)
         .map((item) => item.warehouseId)
         .toSet();
+    if (user.warehouseId != null) {
+      allowedIds.add(user.warehouseId!);
+    }
     return warehouses
         .where((warehouse) => allowedIds.contains(warehouse.id))
         .toList();

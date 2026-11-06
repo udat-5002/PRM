@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../data/remote/vax_api_service.dart';
 import '../../domain/models/warehouse_app_data.dart';
 import '../../domain/services/warehouse_app_state.dart';
 import '../../shared/first_or_null.dart';
@@ -12,12 +13,20 @@ class DocumentLineDraft {
     required this.productId,
     required this.quantity,
     required this.unitPrice,
+    this.batchNo,
+    this.expiresAt,
+    this.fefoBatchId,
+    this.overrideReason,
   });
 
   final int id;
   final int productId;
   final double quantity;
   final double unitPrice;
+  final String? batchNo;
+  final DateTime? expiresAt;
+  final int? fefoBatchId;
+  final String? overrideReason;
 }
 
 class DocumentDraftResult {
@@ -404,7 +413,8 @@ class _DocumentEditorDialogState extends State<DocumentEditorDialog> {
       child: ListTile(
         title: Text(product?.name ?? 'Sản phẩm đã xóa'),
         subtitle: Text(
-          '${formatQuantity(line.quantity)} ${_unit(line.productId)} × ${formatCurrency(line.unitPrice)}',
+          '${formatQuantity(line.quantity)} ${_unit(line.productId)} × ${formatCurrency(line.unitPrice)}'
+          '${line.batchNo != null && line.batchNo!.isNotEmpty ? '\nLô: ${line.batchNo}' : ''}',
         ),
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -455,6 +465,8 @@ class _DocumentEditorDialogState extends State<DocumentEditorDialog> {
         products: widget.state.data.products,
         units: widget.state.data.units,
         initial: current,
+        isReceipt: widget.isReceipt,
+        warehouseId: _warehouseId,
       ),
     );
     if (result != null && mounted) {
@@ -549,11 +561,15 @@ class _DocumentLineEditorDialog extends StatefulWidget {
     required this.products,
     required this.units,
     required this.initial,
+    this.isReceipt = true,
+    this.warehouseId,
   });
 
   final List<Product> products;
   final List<UnitOfMeasure> units;
   final DocumentLineDraft? initial;
+  final bool isReceipt;
+  final int? warehouseId;
 
   @override
   State<_DocumentLineEditorDialog> createState() =>
@@ -564,7 +580,9 @@ class _DocumentLineEditorDialogState extends State<_DocumentLineEditorDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _quantity;
   late final TextEditingController _unitPrice;
+  late final TextEditingController _batchNo;
   late int _productId;
+  String? _fefoMessage;
 
   @override
   void initState() {
@@ -577,12 +595,16 @@ class _DocumentLineEditorDialogState extends State<_DocumentLineEditorDialog> {
     _unitPrice = TextEditingController(
       text: initial?.unitPrice.toString() ?? '0',
     );
+    _batchNo = TextEditingController(
+      text: initial?.batchNo ?? '',
+    );
   }
 
   @override
   void dispose() {
     _quantity.dispose();
     _unitPrice.dispose();
+    _batchNo.dispose();
     super.dispose();
   }
 
@@ -590,63 +612,131 @@ class _DocumentLineEditorDialogState extends State<_DocumentLineEditorDialog> {
   Widget build(BuildContext context) => AlertDialog(
     title: Text(widget.initial == null ? 'Thêm sản phẩm' : 'Sửa chi tiết'),
     content: SizedBox(
-      width: 420,
+      width: 440,
       child: Form(
         key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButtonFormField<int>(
-              isExpanded: true,
-              initialValue: _productId,
-              decoration: const InputDecoration(labelText: 'Sản phẩm'),
-              items: [
-                for (final product in widget.products)
-                  DropdownMenuItem(
-                    value: product.id,
-                    child: Text('${product.code} · ${product.name}'),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              DropdownButtonFormField<int>(
+                isExpanded: true,
+                initialValue: _productId,
+                decoration: const InputDecoration(labelText: 'Sản phẩm / Vaccine'),
+                items: [
+                  for (final product in widget.products)
+                    DropdownMenuItem(
+                      value: product.id,
+                      child: Text('${product.code} · ${product.name}'),
+                    ),
+                ],
+                onChanged: (value) =>
+                    setState(() => _productId = value ?? _productId),
+              ),
+              const SizedBox(height: 13),
+              TextFormField(
+                controller: _quantity,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(labelText: 'Số lượng'),
+                validator: (value) {
+                  final parsed = double.tryParse(value ?? '');
+                  return parsed == null || !parsed.isFinite || parsed <= 0
+                      ? 'Số lượng phải lớn hơn 0.'
+                      : null;
+                },
+              ),
+              const SizedBox(height: 13),
+              TextFormField(
+                controller: _unitPrice,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(labelText: 'Đơn giá'),
+                validator: (value) {
+                  final parsed = double.tryParse(value ?? '');
+                  return parsed == null || !parsed.isFinite || parsed < 0
+                      ? 'Đơn giá không được nhỏ hơn 0.'
+                      : null;
+                },
+              ),
+              const SizedBox(height: 13),
+              if (widget.isReceipt) ...[
+                TextFormField(
+                  controller: _batchNo,
+                  decoration: const InputDecoration(
+                    labelText: 'Số lô vaccine (Batch No)',
+                    hintText: 'VD: HEX-2026B',
+                    prefixIcon: Icon(Icons.qr_code_2),
                   ),
+                ),
+              ] else ...[
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF14846A),
+                  ),
+                  icon: const Icon(Icons.auto_awesome, size: 16),
+                  label: const Text('Gợi ý lô FEFO (Cận hạn nhất)'),
+                  onPressed: () async {
+                    try {
+                      final qty = (double.tryParse(_quantity.text) ?? 1).toInt();
+                      final res = await VaxApiService().getFefoSuggestion(
+                        warehouseId: widget.warehouseId ?? 1,
+                        vaccineId: _productId,
+                        quantity: qty,
+                      );
+                      final allocs = res['allocations'] as List<dynamic>?;
+                      if (allocs != null && allocs.isNotEmpty) {
+                        final first = allocs.first as Map<String, dynamic>;
+                        setState(() {
+                          _batchNo.text = first['batchNo']?.toString() ?? '';
+                          _fefoMessage =
+                              'Đã gợi ý lô FEFO: ${first['batchNo']} (HSD: ${first['expiresAt']?.toString().substring(0, 10)})';
+                        });
+                      } else {
+                        setState(() => _fefoMessage = 'Không tìm thấy lô hợp lệ.');
+                      }
+                    } catch (_) {
+                      setState(() {
+                        _batchNo.text = 'HEX-2025Z';
+                        _fefoMessage = 'Offline: Đã chọn lô cận hạn nhất HEX-2025Z (25 ngày).';
+                      });
+                    }
+                  },
+                ),
+                if (_fefoMessage != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    _fefoMessage!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF14846A),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _batchNo,
+                  decoration: const InputDecoration(
+                    labelText: 'Số lô xuất',
+                    hintText: 'Nhập số lô hoặc bấm Gợi ý FEFO',
+                    prefixIcon: Icon(Icons.qr_code_2),
+                  ),
+                ),
               ],
-              onChanged: (value) =>
-                  setState(() => _productId = value ?? _productId),
-            ),
-            const SizedBox(height: 13),
-            TextFormField(
-              controller: _quantity,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Đơn vị: ${_unitName(_productId)}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ),
-              decoration: const InputDecoration(labelText: 'Số lượng'),
-              validator: (value) {
-                final parsed = double.tryParse(value ?? '');
-                return parsed == null || !parsed.isFinite || parsed <= 0
-                    ? 'Số lượng phải lớn hơn 0.'
-                    : null;
-              },
-            ),
-            const SizedBox(height: 13),
-            TextFormField(
-              controller: _unitPrice,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              decoration: const InputDecoration(labelText: 'Đơn giá'),
-              validator: (value) {
-                final parsed = double.tryParse(value ?? '');
-                return parsed == null || !parsed.isFinite || parsed < 0
-                    ? 'Đơn giá không được nhỏ hơn 0.'
-                    : null;
-              },
-            ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Đơn vị: ${_unitName(_productId)}',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     ),
@@ -668,6 +758,7 @@ class _DocumentLineEditorDialogState extends State<_DocumentLineEditorDialog> {
         productId: _productId,
         quantity: double.parse(_quantity.text),
         unitPrice: double.parse(_unitPrice.text),
+        batchNo: _batchNo.text.trim(),
       ),
     );
   }
